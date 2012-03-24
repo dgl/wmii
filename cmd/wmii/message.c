@@ -58,6 +58,7 @@ enum {
 	LSPAWN,
 	LSWAP,
 	LTAGS,
+        LTITLELESS,
 	LTOGGLE,
 	LUP,
 	LURGENT,
@@ -99,6 +100,7 @@ char *symtab[] = {
 	"spawn",
 	"swap",
 	"tags",
+        "titleless",
 	"toggle",
 	"up",
 	"urgent",
@@ -514,6 +516,7 @@ readctl_client(Client *c) {
 	if(c->pid)
 		bufprint("pid %d\n", c->pid);
 	bufprint("tags %s\n", c->tags);
+	bufprint("titleless %s\n", TOGGLE(c->titleless));
 	bufprint("urgent %s\n", TOGGLE(c->urgent));
 	return buffer;
 }
@@ -535,6 +538,7 @@ message_client(Client *c, IxpMsg *m) {
 	 * kill
 	 * slay
 	 * tags <tags>
+         * titleless <toggle>
 	 * urgent <toggle>
 	 */
 
@@ -566,6 +570,9 @@ message_client(Client *c, IxpMsg *m) {
 		break;
 	case LTAGS:
 		client_applytags(c, m->pos);
+		break;
+        case LTITLELESS:
+		client_titleless(c, gettoggle(msg_getword(m, Ebadvalue)));
 		break;
 	case LURGENT:
 		client_seturgent(c, gettoggle(msg_getword(m, Ebadvalue)), UrgManager);

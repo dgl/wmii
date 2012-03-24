@@ -371,6 +371,9 @@ represents the currently selected client.
                 process if the client's PID is available.
         : tags <tags>
                 The client's tags. The same as the tags file.
+        : titleless <on | off | toggle>
+                When on, the client's titlebar will not be displayed,
+                unless part of a stack.
         : urgent <on | off | toggle>
                 Set or unset the client's urgent hint.
         <<
