@@ -96,6 +96,7 @@ void	client_setviews(Client*, char**);
 void	client_unmap(Client*, int state);
 Frame*	client_viewframe(Client *c, View *v);
 void	focus(Client*, bool user);
+void    client_titleless(Client*, int);
 void	fullscreen(Client*, int, long);
 void	group_init(Client*);
 Client*	group_leader(Group*);
@@ -180,10 +181,10 @@ void	frame_swap(Frame*, Frame*);
 int	ingrabbox_p(Frame*, int x, int y);
 void	move_focus(Frame*, Frame*);
 Rectangle constrain(Rectangle, int);
-Rectangle frame_client2rect(Client*, Rectangle, bool);
+Rectangle frame_client2rect(Client*, Rectangle, bool, bool);
 WinHints  frame_gethints(Frame*);
 Rectangle frame_hints(Frame*, Rectangle, Align);
-Rectangle frame_rect2client(Client*, Rectangle, bool);
+Rectangle frame_rect2client(Client*, Rectangle, bool, bool);
 
 /* fs.c */
 void	fs_attach(Ixp9Req*);

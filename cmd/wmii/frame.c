@@ -257,7 +257,7 @@ frame_gethints(Frame *f) {
 	c = f->client;
 	h = *c->w.hints;
 
-	r = frame_client2rect(c, ZR, f->area->floating);
+	r = frame_client2rect(c, ZR, f->area->floating, c->titleless && !f->collapsed);
 	d = subpt(r.max, r.min);
 
 	if(!f->area->floating && def.incmode == IIgnore)
@@ -290,9 +290,10 @@ frame_gethints(Frame *f) {
 	if(c->fullscreen >= 0)                       \
 		return r;                            \
 						     \
+	if(!titleless)                               \
+		r.min.y PE labelh(def.font);         \
 	if(!floating) {                              \
 		r.min.x PE 1;                        \
-		r.min.y PE labelh(def.font);         \
 		r.max.x ME 1;                        \
 		r.max.y ME 1;                        \
 	}else {                                      \
@@ -301,12 +302,10 @@ frame_gethints(Frame *f) {
 			r.max.x ME def.border;       \
 			r.max.y ME def.border;       \
 		}                                    \
-		if(!c->titleless)                    \
-			r.min.y PE labelh(def.font); \
 	}                                            \
 
 Rectangle
-frame_rect2client(Client *c, Rectangle r, bool floating) {
+frame_rect2client(Client *c, Rectangle r, bool floating, bool titleless) {
 
 	ADJ(+=, -=)
 
@@ -317,7 +316,7 @@ frame_rect2client(Client *c, Rectangle r, bool floating) {
 }
 
 Rectangle
-frame_client2rect(Client *c, Rectangle r, bool floating) {
+frame_client2rect(Client *c, Rectangle r, bool floating, bool titleless) {
 
 	ADJ(-=, +=)
 
@@ -371,7 +370,7 @@ frame_resize(Frame *f, Rectangle r) {
 	if(f->collapsed && f->area->floating)
 		fr.max.y = fr.min.y + labelh(def.font);
 
-	cr = frame_rect2client(c, fr, f->area->floating);
+	cr = frame_rect2client(c, fr, f->area->floating, c->titleless && !f->collapsed);
 	if(f->area->floating)
 		f->r = fr;
 	else {
@@ -435,57 +434,59 @@ frame_draw(Frame *f) {
 	fill(img, r, &col->bg);
 	border(img, r, 1, &col->border);
 
-	/* Title border */
-	r.max.y = r.min.y + labelh(def.font);
-	border(img, r, 1, &col->border);
+        if(!c->titleless || f->collapsed) {
+		/* Title border */
+		r.max.y = r.min.y + labelh(def.font);
+		border(img, r, 1, &col->border);
 
-	f->titlebar = insetrect(r, 3);
-	f->titlebar.max.y += 3;
+		f->titlebar = insetrect(r, 3);
+		f->titlebar.max.y += 3;
 
-	f->grabbox = insetrect(r, 2);
-	f->grabbox.max.x = f->grabbox.min.x + Dy(f->grabbox);
+		f->grabbox = insetrect(r, 2);
+		f->grabbox.max.x = f->grabbox.min.x + Dy(f->grabbox);
 
-	/* Odd focus. Unselected, with keyboard focus. */
-	/* Draw a border just inside the titlebar. */
-	if(c != selclient() && c == disp.focus) {
-		border(img, insetrect(r, 1), 1, &def.normcolor.bg);
-		border(img, insetrect(r, 2), 1, &def.focuscolor.border);
+		/* Odd focus. Unselected, with keyboard focus. */
+		/* Draw a border just inside the titlebar. */
+		if(c != selclient() && c == disp.focus) {
+			border(img, insetrect(r, 1), 1, &def.normcolor.bg);
+			border(img, insetrect(r, 2), 1, &def.focuscolor.border);
+		}
+
+		if(c->urgent)
+			fill(img, f->grabbox, &col->fg);
+		border(img, f->grabbox, 1, &col->border);
+
+		/* Odd focus. Selected, without keyboard focus. */
+		/* Draw a border around the grabbox. */
+		if(c != disp.focus && col == &def.focuscolor)
+			border(img, insetrect(r, -1), 1, &def.normcolor.bg);
+
+		/* Draw a border on borderless+titleless selected apps. */
+		if(c->borderless && c->titleless && f->area->floating && !c->fullscreen && c == selclient())
+			setborder(c->framewin, def.border, &def.focuscolor.border);
+		else
+			setborder(c->framewin, 0, &def.focuscolor.border);
+
+		/* Label */
+		r = Rect(f->grabbox.max.x, 0, fr.max.x, labelh(def.font));
+
+		/* Draw count on frames in 'max' columns. */
+		if(f->area->max && !resizing) {
+			n = stack_count(f, &m);
+			pushlabel(img, &r, smprint("%d/%d", m, n), col);
+		}
+
+		/* Label clients with extra tags. */
+		if((s = client_extratags(c)))
+			pushlabel(img, &r, s, col);
+
+		if(f->area->floating)  /* Make sure floating clients have room for their indicators. */
+			r.max.x -= f->grabbox.max.x;
+
+		if(!ewmh_responsive_p(c))
+			r.min.x += drawstring(img, def.font, r, West, "(wedged) ", &col->fg);
+		r.min.x += drawstring(img, def.font, r, West, c->name, &col->fg);
 	}
-
-	if(c->urgent)
-		fill(img, f->grabbox, &col->fg);
-	border(img, f->grabbox, 1, &col->border);
-
-	/* Odd focus. Selected, without keyboard focus. */
-	/* Draw a border around the grabbox. */
-	if(c != disp.focus && col == &def.focuscolor)
-		border(img, insetrect(r, -1), 1, &def.normcolor.bg);
-
-	/* Draw a border on borderless+titleless selected apps. */
-	if(c->borderless && c->titleless && f->area->floating && !c->fullscreen && c == selclient())
-		setborder(c->framewin, def.border, &def.focuscolor.border);
-	else
-		setborder(c->framewin, 0, &def.focuscolor.border);
-
-	/* Label */
-	r = Rect(f->grabbox.max.x, 0, fr.max.x, labelh(def.font));
-
-	/* Draw count on frames in 'max' columns. */
-	if(f->area->max && !resizing) {
-		n = stack_count(f, &m);
-		pushlabel(img, &r, smprint("%d/%d", m, n), col);
-	}
-
-	/* Label clients with extra tags. */
-	if((s = client_extratags(c)))
-		pushlabel(img, &r, s, col);
-
-	if(f->area->floating)  /* Make sure floating clients have room for their indicators. */
-		r.max.x -= f->grabbox.max.x;
-
-	if(!ewmh_responsive_p(c))
-		r.min.x += drawstring(img, def.font, r, West, "(wedged) ", &col->fg);
-	r.min.x += drawstring(img, def.font, r, West, c->name, &col->fg);
 
 	/* Draw inner border on floating clients. */
 	if(f->area->floating) {

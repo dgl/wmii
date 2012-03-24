@@ -406,24 +406,24 @@ client_grav(Client *c, Rectangle rd) {
 	if(eqrect(rd, ZR)) {
 		if(c->sel) {
 			r = c->sel->floatr;
-			cr = frame_rect2client(c, r, true);
+			cr = frame_rect2client(c, r, true, c->titleless);
 		}else {
 			cr = c->r;
-			r = frame_client2rect(c, cr, true);
+			r = frame_client2rect(c, cr, true, c->titleless);
 			r = rectsetorigin(r, cr.min);
 		}
 		sp = subpt(cr.min, r.min);
 		r = gravitate(r, cr, h->grav);
 		if(!h->gravstatic)
 			r = rectsubpt(r, sp);
-		return frame_rect2client(c, r, true);
+		return frame_rect2client(c, r, true, c->titleless);
 	}else {
-		r = frame_client2rect(c, rd, true);
+		r = frame_client2rect(c, rd, true, c->titleless);
 		sp = subpt(rd.min, r.min);
 		r = gravitate(rd, r, h->grav);
 		if(!h->gravstatic)
 			r = rectaddpt(r, sp);
-		return frame_client2rect(c, r, true);
+		return frame_client2rect(c, r, true, c->titleless);
 	}
 }
 
@@ -434,7 +434,6 @@ client_floats_p(Client *c) {
 	return c->trans
 	    || c->floating
 	    || c->fixedsize
-	    || c->titleless
 	    || c->borderless
 	    || c->fullscreen >= 0
 	    || (c->w.ewmh.type & (TypeDialog|TypeSplash|TypeDock|TypeMenu|TypeToolbar));
@@ -644,6 +643,21 @@ client_kill(Client *c, bool nice) {
 	}
 	else
 		XKillClient(display, c->w.xid);
+}
+
+void
+client_titleless(Client *c, int titleless) {
+	if(titleless == Toggle)
+		titleless = c->titleless ^ On;
+
+	event("Titleless %#C %s\n", c, (titleless ? "on" : "off"));
+	c->titleless = titleless;
+
+	if(c->sel && c->sel->view == selview) {
+		client_resize(c, c->r);
+		view_update(c->sel->view);
+		frame_draw(c->sel);
+	}
 }
 
 void

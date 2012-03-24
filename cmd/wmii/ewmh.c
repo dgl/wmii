@@ -508,7 +508,7 @@ ewmh_framesize(Client *c) {
 		rf = f->r;
 	}
 	else {
-		rf = frame_client2rect(c, ZR, c->floating);
+		rf = frame_client2rect(c, ZR, c->floating, c->titleless);
 		rc = rectsubpt(ZR, rf.min);
 	}
 
