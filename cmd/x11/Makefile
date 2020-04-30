@@ -7,7 +7,7 @@ TARG =	wikeyname \
 
 PACKAGES += $(X11PACKAGES)
 
-LIB = $(LIBS9) $(LIBIXP)
+LIB = $(LIBS9) $(LIBIXP) -ldl
 LIBS += $(LIB)
 CFLAGS += $(INCX11)
 
